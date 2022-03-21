@@ -1,0 +1,94 @@
+_schema-version: "3.2"
+ID: caiplugin
+description: A Fiori application.
+version: 0.0.1
+modules:
+- name: caiplugin-dest-content
+  type: com.sap.application.content
+  requires:
+  - name: caiplugin-dest-srv
+    parameters:
+      content-target: true
+  - name: caiplugin-repo-host
+    parameters:
+      service-key:
+        name: caiplugin-repo-host-key
+  - name: caiplugin-uaa
+    parameters:
+      service-key:
+        name: caiplugin-uaa-key
+  parameters:
+    content:
+      instance:
+        destinations:
+        - Name: caiplugin_repo_host
+          ServiceInstanceName: caiplugin-html5-srv
+          ServiceKeyName: caiplugin-repo-host-key
+          sap.cloud.service: caiplugin
+        - Authentication: OAuth2UserTokenExchange
+          Name: caiplugin_uaa
+          ServiceInstanceName: caiplugin-xsuaa-srv
+          ServiceKeyName: caiplugin-uaa-key
+          sap.cloud.service: caiplugin
+        existing_destinations_policy: ignore
+  build-parameters:
+    no-source: true
+- name: caiplugin-app-content
+  type: com.sap.application.content
+  path: .
+  requires:
+  - name: caiplugin-repo-host
+    parameters:
+      content-target: true
+  build-parameters:
+    build-result: resources
+    requires:
+    - artifacts:
+      - caiplugin.zip
+      name: caiplugin
+      target-path: resources/
+- name: caiplugin
+  type: html5
+  path: .
+  build-parameters:
+    build-result: dist
+    builder: custom
+    commands:
+    - npm install
+    - npm run build:cf
+    supported-platforms: []
+resources:
+- name: caiplugin-dest-srv
+  type: org.cloudfoundry.managed-service
+  parameters:
+    config:
+      HTML5Runtime_enabled: true
+      init_data:
+        instance:
+          destinations:
+          - Authentication: NoAuthentication
+            Name: ui5
+            ProxyType: Internet
+            Type: HTTP
+            URL: https://ui5.sap.com
+          existing_destinations_policy: update
+      version: 1.0.0
+    service: destination
+    service-name: caiplugin-dest-srv
+    service-plan: lite
+- name: caiplugin-uaa
+  type: org.cloudfoundry.managed-service
+  parameters:
+    path: ./xs-security.json
+    service: xsuaa
+    service-name: caiplugin-xsuaa-srv
+    service-plan: application
+- name: caiplugin-repo-host
+  type: org.cloudfoundry.managed-service
+  parameters:
+    service: html5-apps-repo
+    service-name: caiplugin-html5-srv
+    service-plan: app-host
+parameters:
+  deploy_mode: html5-repo
+  enable-parallel-deployments: true
